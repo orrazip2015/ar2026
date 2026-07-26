@@ -17,9 +17,11 @@ const DEFAULT_MESSAGE = "aqui esta el punto";
 
 const TARGET_STORAGE_KEY = "ar-target-config";
 const LEGACY_TARGET_STORAGE_KEY = "ar-target-coordinates";
+const HEADING_SMOOTH_SAMPLES = 5;
 
 const state = {
   menuCollapsed: false,
+  headingHistory: [],
   target: {
     name: "Objetivo personalizado",
     latitude: null,

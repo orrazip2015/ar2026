@@ -3,7 +3,8 @@ const DEFAULT_MESSAGE = "aqui esta el punto";
 const TARGET_STORAGE_KEY = "ar-target-config";
 const LEGACY_TARGET_STORAGE_KEY = "ar-target-coordinates";
 
-const ALIGNMENT_THRESHOLD_DEG = 15;
+const ALIGNMENT_THRESHOLD_DEG = 30;
+const HEADING_SMOOTH_SAMPLES = 5;
 
 const els = {
   camera: document.getElementById("camera"),
@@ -26,6 +27,7 @@ const els = {
 
 const state = {
   heading: null,
+  headingHistory: [],
   position: null,
   watchId: null,
   target: {
@@ -234,7 +236,14 @@ function onDeviceOrientation(event) {
     return;
   }
 
-  state.heading = normalizeDegrees(heading);
+  heading = normalizeDegrees(heading);
+  state.headingHistory.push(heading);
+  if (state.headingHistory.length > HEADING_SMOOTH_SAMPLES) {
+    state.headingHistory.shift();
+  }
+
+  const smoothedHeading = state.headingHistory.reduce((sum, h) => sum + h, 0) / state.headingHistory.length;
+  state.heading = smoothedHeading;
   updateArState();
 }
 
