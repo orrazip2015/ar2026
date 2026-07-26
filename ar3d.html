@@ -14,9 +14,12 @@
   </head>
   <body>
     <div class="container-fluid overlay-wrap d-flex align-items-end p-2 p-sm-3" id="overlay">
-      <section class="overlay card w-100 mx-auto shadow">
+      <section id="hudPanel" class="overlay card w-100 mx-auto shadow">
         <div class="card-body p-3">
-          <h1 class="h6 mb-2">AR 3D Geolocalizado</h1>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h1 class="h6 mb-0">AR 3D Geolocalizado</h1>
+            <button id="menuCollapseBtn" class="btn btn-sm btn-outline-secondary" type="button">Bajar menu</button>
+          </div>
           <p id="arStatus" class="small mb-2">Presiona el boton para activar camara, ubicacion y brujula.</p>
 
           <div class="target-config rounded-3 p-2 mb-2">
@@ -74,6 +77,8 @@
           <a class="small" href="index.html">Volver a version clasica</a>
         </div>
       </section>
+
+      <button id="menuOpenBtn" class="btn btn-primary btn-sm menu-fab hidden" type="button">Subir menu</button>
     </div>
 
     <a-scene

@@ -19,6 +19,9 @@ const els = {
   resetCoordsBtn: document.getElementById("resetCoordsBtn"),
   targetInfo: document.getElementById("targetInfo"),
   messageInput: document.getElementById("messageInput"),
+  hudPanel: document.getElementById("hudPanel"),
+  menuCollapseBtn: document.getElementById("menuCollapseBtn"),
+  menuOpenBtn: document.getElementById("menuOpenBtn"),
 };
 
 const state = {
@@ -31,7 +34,14 @@ const state = {
     longitude: null,
     message: DEFAULT_MESSAGE,
   },
+  menuCollapsed: false,
 };
+
+function setMenuCollapsed(collapsed) {
+  state.menuCollapsed = collapsed;
+  els.hudPanel.classList.toggle("hidden", collapsed);
+  els.menuOpenBtn.classList.toggle("hidden", !collapsed);
+}
 
 function cleanMessage(value) {
   const text = String(value || "").trim();
@@ -312,6 +322,9 @@ async function startApp() {
 els.startBtn.addEventListener("click", startApp);
 els.saveCoordsBtn.addEventListener("click", applyManualCoordinates);
 els.resetCoordsBtn.addEventListener("click", clearTargetConfig);
+els.menuCollapseBtn.addEventListener("click", () => setMenuCollapsed(true));
+els.menuOpenBtn.addEventListener("click", () => setMenuCollapsed(false));
 
 loadStoredTarget();
 syncTargetUi();
+setMenuCollapsed(false);

@@ -24,6 +24,14 @@ body {
   max-width: 560px;
 }
 
+.menu-fab {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+
 .target-message {
   position: absolute;
   left: 50%;

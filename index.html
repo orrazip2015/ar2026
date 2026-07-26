@@ -15,9 +15,12 @@
       <video id="camera" autoplay playsinline muted></video>
 
       <div class="container-fluid d-flex align-items-end h-100 p-2 p-sm-3">
-        <section class="hud card w-100 mx-auto shadow">
+        <section id="hudPanel" class="hud card w-100 mx-auto shadow">
           <div class="card-body p-3">
-            <h1 class="h6 mb-2">AR Geolocalizado</h1>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h1 class="h6 mb-0">AR Geolocalizado</h1>
+              <button id="menuCollapseBtn" class="btn btn-sm btn-outline-secondary" type="button">Bajar menu</button>
+            </div>
             <p id="status" class="small mb-2">Iniciando camara, ubicacion y brujula...</p>
             <p class="hint small mb-2">Apunta el celular hacia el objetivo para ver el mensaje.</p>
 
@@ -88,6 +91,8 @@
           </div>
         </section>
       </div>
+
+      <button id="menuOpenBtn" class="btn btn-primary btn-sm menu-fab hidden" type="button">Subir menu</button>
 
       <div id="targetMessage" class="target-message alert alert-warning fw-semibold text-uppercase hidden mb-0" role="alert">
         aqui esta el punto

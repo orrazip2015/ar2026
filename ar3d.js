@@ -9,6 +9,9 @@ const saveCoordsBtn = document.getElementById("saveCoordsBtn");
 const resetCoordsBtn = document.getElementById("resetCoordsBtn");
 const targetInfo = document.getElementById("targetInfo");
 const targetLabel = document.getElementById("targetLabel");
+const hudPanel = document.getElementById("hudPanel");
+const menuCollapseBtn = document.getElementById("menuCollapseBtn");
+const menuOpenBtn = document.getElementById("menuOpenBtn");
 
 const DEFAULT_MESSAGE = "aqui esta el punto";
 
@@ -16,6 +19,7 @@ const TARGET_STORAGE_KEY = "ar-target-config";
 const LEGACY_TARGET_STORAGE_KEY = "ar-target-coordinates";
 
 const state = {
+  menuCollapsed: false,
   target: {
     name: "Objetivo personalizado",
     latitude: null,
@@ -23,6 +27,12 @@ const state = {
     message: DEFAULT_MESSAGE,
   },
 };
+
+function setMenuCollapsed(collapsed) {
+  state.menuCollapsed = collapsed;
+  hudPanel.classList.toggle("hidden", collapsed);
+  menuOpenBtn.classList.toggle("hidden", !collapsed);
+}
 
 function parseCoordinate(value) {
   const num = Number(value);
@@ -180,11 +190,7 @@ async function startArExperience() {
 
     arScene.classList.remove("hidden");
     arStatus.textContent = `AR activo. Apunta hacia ${state.target.name}.`;
-
-    // Dejamos el panel visible unos segundos para confirmar que activo.
-    setTimeout(() => {
-      overlay.classList.add("hidden");
-    }, 2500);
+    setMenuCollapsed(true);
   } catch (error) {
     arStatus.textContent = `No fue posible iniciar: ${error.message}`;
     activateArBtn.disabled = false;
@@ -194,7 +200,7 @@ async function startArExperience() {
 
 window.addEventListener("gps-camera-update-position", () => {
   // Evento util para confirmar que AR.js ya recibe ubicacion.
-  if (!overlay.classList.contains("hidden")) {
+  if (!state.menuCollapsed) {
     arStatus.textContent = "Ubicacion detectada. Busca tu rotulo en camara.";
   }
 });
@@ -202,7 +208,10 @@ window.addEventListener("gps-camera-update-position", () => {
 activateArBtn.addEventListener("click", startArExperience);
 saveCoordsBtn.addEventListener("click", applyManualCoordinates);
 resetCoordsBtn.addEventListener("click", clearTargetConfig);
+menuCollapseBtn.addEventListener("click", () => setMenuCollapsed(true));
+menuOpenBtn.addEventListener("click", () => setMenuCollapsed(false));
 
 loadStoredTarget();
 syncTargetUi();
 updateTargetEntity();
+setMenuCollapsed(false);
