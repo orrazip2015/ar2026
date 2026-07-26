@@ -3,8 +3,8 @@ const DEFAULT_MESSAGE = "aqui esta el punto";
 const TARGET_STORAGE_KEY = "ar-target-config";
 const LEGACY_TARGET_STORAGE_KEY = "ar-target-coordinates";
 
-const ALIGNMENT_THRESHOLD_DEG = 30;
-const HEADING_SMOOTH_SAMPLES = 5;
+const ALIGNMENT_THRESHOLD_DEG = 12;
+const HEADING_SMOOTH_SAMPLES = 12;
 
 const els = {
   camera: document.getElementById("camera"),
