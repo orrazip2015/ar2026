@@ -94,12 +94,56 @@
       <a-entity
         id="targetLabel"
         gps-entity-place="latitude: 0; longitude: 0"
-        geometry="primitive: plane; width: 6; height: 2"
-        material="opacity: 0.92; side: double"
-        text="value: aqui esta el punto; align: center; width: 10"
         visible="false"
-        scale="6 6 6"
-      ></a-entity>
+        position="0 0 0"
+      >
+        <!-- Pokéball superior rojo -->
+        <a-sphere
+          id="pokeball-top"
+          radius="1"
+          color="#E41E3D"
+          material="side: double"
+        ></a-sphere>
+
+        <!-- Banda blanca del medio -->
+        <a-box
+          position="0 0 1.01"
+          width="2.1"
+          height="0.35"
+          depth="0.1"
+          color="white"
+          material="side: double"
+        ></a-box>
+
+        <!-- Pokéball inferior blanca -->
+        <a-sphere
+          id="pokeball-bottom"
+          position="0 -1.15 0"
+          radius="0.85"
+          color="white"
+          material="side: double"
+        ></a-sphere>
+
+        <!-- Círculo central (botón) -->
+        <a-sphere
+          id="pokeball-center"
+          position="0 0 1.02"
+          radius="0.35"
+          color="#333333"
+          material="side: double"
+        ></a-sphere>
+
+        <!-- Texto debajo -->
+        <a-text
+          position="0 -3 0"
+          value="¡Objetivo encontrado!"
+          align="center"
+          width="8"
+          color="white"
+          font="dejavu"
+          anchor="center"
+        ></a-text>
+      </a-entity>
     </a-scene>
 
     <script src="ar3d.js"></script>

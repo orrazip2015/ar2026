@@ -19,6 +19,9 @@ const TARGET_STORAGE_KEY = "ar-target-config";
 const LEGACY_TARGET_STORAGE_KEY = "ar-target-coordinates";
 const HEADING_SMOOTH_SAMPLES = 12;
 
+let pokeballRotation = 0;
+let animationId = null;
+
 const state = {
   menuCollapsed: false,
   headingHistory: [],
@@ -29,6 +32,33 @@ const state = {
     message: DEFAULT_MESSAGE,
   },
 };
+
+function startPokeballAnimation() {
+  if (animationId) cancelAnimationFrame(animationId);
+  
+  function animate() {
+    pokeballRotation += 2;
+    
+    const top = document.getElementById("pokeball-top");
+    const bottom = document.getElementById("pokeball-bottom");
+    const center = document.getElementById("pokeball-center");
+    
+    if (top) top.setAttribute("rotation", `0 ${pokeballRotation} 0`);
+    if (bottom) bottom.setAttribute("rotation", `0 ${pokeballRotation} 0`);
+    if (center) center.setAttribute("rotation", `0 ${-pokeballRotation} 0`);
+    
+    animationId = requestAnimationFrame(animate);
+  }
+  
+  animate();
+}
+
+function stopPokeballAnimation() {
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+}
 
 function setMenuCollapsed(collapsed) {
   state.menuCollapsed = collapsed;
@@ -98,11 +128,12 @@ function updateTargetEntity() {
     `latitude: ${state.target.latitude}; longitude: ${state.target.longitude}`
   );
   targetLabel.setAttribute("visible", "true");
-  targetLabel.setAttribute("text", {
-    value: state.target.message,
-    align: "center",
-    width: 10,
-  });
+
+  // Actualizar el texto debajo del Pokéball
+  const textElement = targetLabel.querySelector("a-text");
+  if (textElement) {
+    textElement.setAttribute("value", state.target.message);
+  }
 }
 
 function saveTargetToStorage() {
@@ -193,10 +224,12 @@ async function startArExperience() {
     arScene.classList.remove("hidden");
     arStatus.textContent = `AR activo. Apunta hacia ${state.target.name}.`;
     setMenuCollapsed(true);
+    startPokeballAnimation();
   } catch (error) {
     arStatus.textContent = `No fue posible iniciar: ${error.message}`;
     activateArBtn.disabled = false;
     activateArBtn.textContent = "Reintentar";
+    stopPokeballAnimation();
   }
 }
 
