@@ -86,8 +86,9 @@
       class="hidden"
       vr-mode-ui="enabled: false"
       embedded
-      renderer="antialias: true; alpha: true"
-      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false"
+      style="width: 100%; height: 100%;"
+      renderer="antialias: true; alpha: true; sortObjects: true"
+      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false; trackingMethod: best"
     >
       <a-camera gps-camera rotation-reader></a-camera>
 

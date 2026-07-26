@@ -64,6 +64,12 @@ function setMenuCollapsed(collapsed) {
   state.menuCollapsed = collapsed;
   hudPanel.classList.toggle("hidden", collapsed);
   menuOpenBtn.classList.toggle("hidden", !collapsed);
+  
+  // Si abres el menú, restaura la visibilidad del overlay
+  if (!collapsed) {
+    overlay.style.pointerEvents = "auto";
+    overlay.style.opacity = "1";
+  }
 }
 
 function parseCoordinate(value) {
@@ -221,7 +227,18 @@ async function startArExperience() {
     ensureGeolocationAvailable();
     await requestOrientationPermissionIfNeeded();
 
+    // Ocultar overlay completamente
+    overlay.style.pointerEvents = "none";
+    overlay.style.opacity = "0";
+
+    // Pequeño delay para que AR.js se inicialice
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     arScene.classList.remove("hidden");
+    
+    // Esperar a que la cámara se active
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     arStatus.textContent = `AR activo. Apunta hacia ${state.target.name}.`;
     setMenuCollapsed(true);
     startPokeballAnimation();
@@ -230,6 +247,11 @@ async function startArExperience() {
     activateArBtn.disabled = false;
     activateArBtn.textContent = "Reintentar";
     stopPokeballAnimation();
+    
+    // Restaurar overlay
+    overlay.style.pointerEvents = "auto";
+    overlay.style.opacity = "1";
+    arScene.classList.add("hidden");
   }
 }
 
@@ -238,6 +260,15 @@ window.addEventListener("gps-camera-update-position", () => {
   if (!state.menuCollapsed) {
     arStatus.textContent = "Ubicacion detectada. Busca tu rotulo en camara.";
   }
+});
+
+// Monitorear carga de A-Frame
+arScene.addEventListener("loaded", () => {
+  console.log("A-Frame escena cargada");
+});
+
+arScene.addEventListener("renderstart", () => {
+  console.log("Renderizado iniciado");
 });
 
 activateArBtn.addEventListener("click", startArExperience);
