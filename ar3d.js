@@ -1,30 +1,36 @@
 const activateArBtn = document.getElementById("activateAr");
 const arStatus = document.getElementById("arStatus");
-const arScene = document.getElementById("arScene");
 const overlay = document.getElementById("overlay");
+const hudPanel = document.getElementById("hudPanel");
 const latInput = document.getElementById("latInput");
 const lonInput = document.getElementById("lonInput");
 const messageInput = document.getElementById("messageInput");
 const saveCoordsBtn = document.getElementById("saveCoordsBtn");
 const resetCoordsBtn = document.getElementById("resetCoordsBtn");
 const targetInfo = document.getElementById("targetInfo");
-const targetLabel = document.getElementById("targetLabel");
-const hudPanel = document.getElementById("hudPanel");
 const menuCollapseBtn = document.getElementById("menuCollapseBtn");
 const menuOpenBtn = document.getElementById("menuOpenBtn");
+const camera3d = document.getElementById("camera3d");
+const threeCanvas = document.getElementById("threeCanvas");
+const targetMessage3d = document.getElementById("targetMessage3d");
 
 const DEFAULT_MESSAGE = "aqui esta el punto";
-
 const TARGET_STORAGE_KEY = "ar-target-config";
 const LEGACY_TARGET_STORAGE_KEY = "ar-target-coordinates";
-const HEADING_SMOOTH_SAMPLES = 12;
+const POKEMON_GLB_URL = "";
 
-let pokeballRotation = 0;
-let animationId = null;
+const ALIGNMENT_THRESHOLD_DEG = 12;
+const HEADING_SMOOTH_SAMPLES = 12;
 
 const state = {
   menuCollapsed: false,
+  arActive: false,
+  heading: null,
   headingHistory: [],
+  position: null,
+  geolocationWatchId: null,
+  cameraStream: null,
+  rafId: null,
   target: {
     name: "Objetivo personalizado",
     latitude: null,
@@ -33,43 +39,18 @@ const state = {
   },
 };
 
-function startPokeballAnimation() {
-  if (animationId) cancelAnimationFrame(animationId);
-  
-  function animate() {
-    pokeballRotation += 2;
-    
-    const top = document.getElementById("pokeball-top");
-    const bottom = document.getElementById("pokeball-bottom");
-    const center = document.getElementById("pokeball-center");
-    
-    if (top) top.setAttribute("rotation", `0 ${pokeballRotation} 0`);
-    if (bottom) bottom.setAttribute("rotation", `0 ${pokeballRotation} 0`);
-    if (center) center.setAttribute("rotation", `0 ${-pokeballRotation} 0`);
-    
-    animationId = requestAnimationFrame(animate);
-  }
-  
-  animate();
-}
-
-function stopPokeballAnimation() {
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-    animationId = null;
-  }
-}
+let scene = null;
+let threeCamera = null;
+let renderer = null;
+let pokemonGroup = null;
+let threeReady = false;
 
 function setMenuCollapsed(collapsed) {
   state.menuCollapsed = collapsed;
   hudPanel.classList.toggle("hidden", collapsed);
   menuOpenBtn.classList.toggle("hidden", !collapsed);
-  
-  // Si abres el menú, restaura la visibilidad del overlay
-  if (!collapsed) {
-    overlay.style.pointerEvents = "auto";
-    overlay.style.opacity = "1";
-  }
+  overlay.classList.toggle("align-items-end", !collapsed);
+  overlay.classList.toggle("align-items-start", collapsed);
 }
 
 function parseCoordinate(value) {
@@ -120,28 +101,6 @@ function syncTargetUi() {
   }
 }
 
-function updateTargetEntity() {
-  const hasTarget =
-    typeof state.target.latitude === "number" && typeof state.target.longitude === "number";
-
-  if (!hasTarget) {
-    targetLabel.setAttribute("visible", "false");
-    return;
-  }
-
-  targetLabel.setAttribute(
-    "gps-entity-place",
-    `latitude: ${state.target.latitude}; longitude: ${state.target.longitude}`
-  );
-  targetLabel.setAttribute("visible", "true");
-
-  // Actualizar el texto debajo del Pokéball
-  const textElement = targetLabel.querySelector("a-text");
-  if (textElement) {
-    textElement.setAttribute("value", state.target.message);
-  }
-}
-
 function saveTargetToStorage() {
   localStorage.setItem(
     TARGET_STORAGE_KEY,
@@ -175,7 +134,7 @@ function applyManualCoordinates() {
 
   saveTargetToStorage();
   syncTargetUi();
-  updateTargetEntity();
+  updateArState();
   arStatus.textContent = "Coordenadas guardadas en AR 3D.";
 }
 
@@ -189,7 +148,7 @@ function clearTargetConfig() {
   localStorage.removeItem(TARGET_STORAGE_KEY);
   localStorage.removeItem(LEGACY_TARGET_STORAGE_KEY);
   syncTargetUi();
-  updateTargetEntity();
+  updateArState();
   arStatus.textContent = "Objetivo limpiado. Ingresa coordenadas para continuar.";
 }
 
@@ -212,10 +171,308 @@ function ensureGeolocationAvailable() {
   }
 }
 
+function extractHeading(event) {
+  if (typeof event.webkitCompassHeading === "number") {
+    return event.webkitCompassHeading;
+  }
+  if (typeof event.alpha === "number") {
+    return (360 - event.alpha + 360) % 360;
+  }
+  return null;
+}
+
+function normalizeDeg(value) {
+  return (value + 360) % 360;
+}
+
+function getSmoothedHeading(history) {
+  if (!history.length) {
+    return null;
+  }
+
+  let sumSin = 0;
+  let sumCos = 0;
+  for (const heading of history) {
+    const rad = (heading * Math.PI) / 180;
+    sumSin += Math.sin(rad);
+    sumCos += Math.cos(rad);
+  }
+
+  const avgRad = Math.atan2(sumSin / history.length, sumCos / history.length);
+  return normalizeDeg((avgRad * 180) / Math.PI);
+}
+
+function onDeviceOrientation(event) {
+  const heading = extractHeading(event);
+  if (heading === null) {
+    return;
+  }
+
+  state.headingHistory.push(normalizeDeg(heading));
+  if (state.headingHistory.length > HEADING_SMOOTH_SAMPLES) {
+    state.headingHistory.shift();
+  }
+
+  state.heading = getSmoothedHeading(state.headingHistory);
+  updateArState();
+}
+
+function bearingToTarget(lat1, lon1, lat2, lon2) {
+  const toRad = Math.PI / 180;
+  const phi1 = lat1 * toRad;
+  const phi2 = lat2 * toRad;
+  const deltaLon = (lon2 - lon1) * toRad;
+
+  const y = Math.sin(deltaLon) * Math.cos(phi2);
+  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLon);
+
+  return normalizeDeg((Math.atan2(y, x) * 180) / Math.PI);
+}
+
+function distanceMeters(lat1, lon1, lat2, lon2) {
+  const toRad = Math.PI / 180;
+  const earthRadius = 6371000;
+  const dLat = (lat2 - lat1) * toRad;
+  const dLon = (lon2 - lon1) * toRad;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadius * c;
+}
+
+function minimalAngleDiff(a, b) {
+  const diff = Math.abs(a - b) % 360;
+  return diff > 180 ? 360 - diff : diff;
+}
+
+function createFallbackPokemonMarker() {
+  const group = new THREE.Group();
+
+  const yellow = new THREE.MeshStandardMaterial({ color: 0xf7d117, roughness: 0.55, metalness: 0.05 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x202020, roughness: 0.45, metalness: 0.15 });
+  const red = new THREE.MeshStandardMaterial({ color: 0xe53935, roughness: 0.5, metalness: 0.05 });
+
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 24), yellow);
+  body.position.y = -0.1;
+  group.add(body);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 32, 24), yellow);
+  head.position.y = 0.55;
+  group.add(head);
+
+  const earGeo = new THREE.ConeGeometry(0.12, 0.5, 14);
+  const earL = new THREE.Mesh(earGeo, yellow);
+  earL.position.set(-0.2, 1.0, -0.03);
+  earL.rotation.z = 0.22;
+  group.add(earL);
+
+  const earR = new THREE.Mesh(earGeo, yellow);
+  earR.position.set(0.2, 1.0, -0.03);
+  earR.rotation.z = -0.22;
+  group.add(earR);
+
+  const earTipGeo = new THREE.ConeGeometry(0.07, 0.2, 10);
+  const tipL = new THREE.Mesh(earTipGeo, black);
+  tipL.position.set(-0.2, 1.2, -0.03);
+  tipL.rotation.z = 0.22;
+  group.add(tipL);
+
+  const tipR = new THREE.Mesh(earTipGeo, black);
+  tipR.position.set(0.2, 1.2, -0.03);
+  tipR.rotation.z = -0.22;
+  group.add(tipR);
+
+  const cheekGeo = new THREE.SphereGeometry(0.08, 16, 12);
+  const cheekL = new THREE.Mesh(cheekGeo, red);
+  cheekL.position.set(-0.18, 0.5, 0.35);
+  group.add(cheekL);
+
+  const cheekR = new THREE.Mesh(cheekGeo, red);
+  cheekR.position.set(0.18, 0.5, 0.35);
+  group.add(cheekR);
+
+  const eyeGeo = new THREE.SphereGeometry(0.045, 14, 10);
+  const eyeL = new THREE.Mesh(eyeGeo, black);
+  eyeL.position.set(-0.1, 0.65, 0.35);
+  group.add(eyeL);
+
+  const eyeR = new THREE.Mesh(eyeGeo, black);
+  eyeR.position.set(0.1, 0.65, 0.35);
+  group.add(eyeR);
+
+  group.position.set(0, 0, -3.2);
+  group.scale.setScalar(1.2);
+
+  return group;
+}
+
+function loadGlbModel(url) {
+  return new Promise((resolve, reject) => {
+    if (!window.THREE || typeof THREE.GLTFLoader !== "function") {
+      reject(new Error("GLTFLoader no disponible"));
+      return;
+    }
+
+    const loader = new THREE.GLTFLoader();
+    loader.load(
+      url,
+      gltf => resolve(gltf.scene),
+      undefined,
+      err => reject(err)
+    );
+  });
+}
+
+async function createPokemonMarker() {
+  if (POKEMON_GLB_URL) {
+    try {
+      const model = await loadGlbModel(POKEMON_GLB_URL);
+      model.position.set(0, -0.8, -3.2);
+      model.scale.setScalar(1.3);
+      return model;
+    } catch (error) {
+      console.warn("No se pudo cargar GLB, se usa fallback:", error);
+    }
+  }
+
+  return createFallbackPokemonMarker();
+}
+
+async function initThreeScene() {
+  scene = new THREE.Scene();
+  threeCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+  scene.add(ambient);
+
+  const key = new THREE.DirectionalLight(0xffffff, 1.1);
+  key.position.set(1.5, 2.2, 2.5);
+  scene.add(key);
+
+  pokemonGroup = await createPokemonMarker();
+  pokemonGroup.visible = false;
+  scene.add(pokemonGroup);
+
+  threeReady = true;
+}
+
+function renderLoop() {
+  if (!state.arActive || !renderer || !scene || !threeCamera) {
+    return;
+  }
+
+  if (pokemonGroup && pokemonGroup.visible) {
+    pokemonGroup.rotation.y += 0.04;
+    pokemonGroup.rotation.x = Math.sin(performance.now() * 0.002) * 0.08;
+  }
+
+  renderer.render(scene, threeCamera);
+  state.rafId = requestAnimationFrame(renderLoop);
+}
+
+function startRenderLoop() {
+  if (state.rafId !== null) {
+    cancelAnimationFrame(state.rafId);
+  }
+  state.rafId = requestAnimationFrame(renderLoop);
+}
+
+function updateArState() {
+  if (!threeReady || !pokemonGroup) {
+    return;
+  }
+
+  const hasTarget =
+    typeof state.target.latitude === "number" && typeof state.target.longitude === "number";
+
+  if (!state.arActive || !hasTarget || !state.position || state.heading === null) {
+    pokemonGroup.visible = false;
+    targetMessage3d.classList.add("hidden");
+    return;
+  }
+
+  const bearing = bearingToTarget(
+    state.position.latitude,
+    state.position.longitude,
+    state.target.latitude,
+    state.target.longitude
+  );
+  const diff = minimalAngleDiff(state.heading, bearing);
+  const distance = distanceMeters(
+    state.position.latitude,
+    state.position.longitude,
+    state.target.latitude,
+    state.target.longitude
+  );
+
+  const aligned = diff <= ALIGNMENT_THRESHOLD_DEG;
+  pokemonGroup.visible = aligned;
+
+  if (aligned) {
+    const clampedDistance = Math.max(2, Math.min(60, distance));
+    const scale = Math.max(0.8, Math.min(1.8, 12 / Math.sqrt(clampedDistance)));
+    pokemonGroup.scale.setScalar(scale);
+    targetMessage3d.textContent = state.target.message;
+    targetMessage3d.classList.remove("hidden");
+    arStatus.textContent = `Objetivo detectado a ${distance.toFixed(1)} m.`;
+  } else {
+    targetMessage3d.classList.add("hidden");
+    arStatus.textContent = `Busca objetivo | Distancia ${distance.toFixed(1)} m | Error ${diff.toFixed(1)}°`;
+  }
+}
+
+async function startCamera() {
+  if (state.cameraStream) {
+    return;
+  }
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: { ideal: "environment" },
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+    audio: false,
+  });
+
+  state.cameraStream = stream;
+  camera3d.srcObject = stream;
+  await camera3d.play();
+}
+
+function startGeolocationWatch() {
+  if (state.geolocationWatchId !== null) {
+    return;
+  }
+
+  state.geolocationWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      state.position = {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      };
+      updateArState();
+    },
+    error => {
+      arStatus.textContent = `Error de ubicacion: ${error.message}`;
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 2000,
+      timeout: 15000,
+    }
+  );
+}
+
 async function startArExperience() {
   try {
     const hasTarget =
       typeof state.target.latitude === "number" && typeof state.target.longitude === "number";
+
     if (!hasTarget) {
       arStatus.textContent = "Primero ingresa coordenadas y pulsa Guardar objetivo.";
       return;
@@ -224,60 +481,61 @@ async function startArExperience() {
     activateArBtn.disabled = true;
     activateArBtn.textContent = "Activando...";
 
+    if (!window.isSecureContext) {
+      throw new Error("Debes abrir esta app en HTTPS o localhost");
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error("Camara no soportada en este navegador");
+    }
+
     ensureGeolocationAvailable();
     await requestOrientationPermissionIfNeeded();
+    await startCamera();
+    startGeolocationWatch();
 
-    // Ocultar overlay completamente
-    overlay.style.pointerEvents = "none";
-    overlay.style.opacity = "0";
+    if (!threeReady) {
+      await initThreeScene();
+    }
 
-    // Pequeño delay para que AR.js se inicialice
-    await new Promise(resolve => setTimeout(resolve, 500));
+    if (!state.arActive) {
+      window.addEventListener("deviceorientation", onDeviceOrientation, { passive: true });
+    }
 
-    arScene.classList.remove("hidden");
-    
-    // Esperar a que la cámara se active
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    arStatus.textContent = `AR activo. Apunta hacia ${state.target.name}.`;
+    state.arActive = true;
+    camera3d.classList.remove("hidden");
+    threeCanvas.classList.remove("hidden");
     setMenuCollapsed(true);
-    startPokeballAnimation();
+    startRenderLoop();
+    updateArState();
+
+    activateArBtn.textContent = "AR 3D activo";
+    arStatus.textContent = "AR 3D activo. Mueve el telefono para alinear el objetivo.";
   } catch (error) {
-    arStatus.textContent = `No fue posible iniciar: ${error.message}`;
+    state.arActive = false;
     activateArBtn.disabled = false;
     activateArBtn.textContent = "Reintentar";
-    stopPokeballAnimation();
-    
-    // Restaurar overlay
-    overlay.style.pointerEvents = "auto";
-    overlay.style.opacity = "1";
-    arScene.classList.add("hidden");
+    arStatus.textContent = `No fue posible iniciar: ${error.message}`;
+    targetMessage3d.classList.add("hidden");
   }
 }
 
-window.addEventListener("gps-camera-update-position", () => {
-  // Evento util para confirmar que AR.js ya recibe ubicacion.
-  if (!state.menuCollapsed) {
-    arStatus.textContent = "Ubicacion detectada. Busca tu rotulo en camara.";
+function onResize() {
+  if (!renderer || !threeCamera) {
+    return;
   }
-});
-
-// Monitorear carga de A-Frame
-arScene.addEventListener("loaded", () => {
-  console.log("A-Frame escena cargada");
-});
-
-arScene.addEventListener("renderstart", () => {
-  console.log("Renderizado iniciado");
-});
+  threeCamera.aspect = window.innerWidth / window.innerHeight;
+  threeCamera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
 
 activateArBtn.addEventListener("click", startArExperience);
 saveCoordsBtn.addEventListener("click", applyManualCoordinates);
 resetCoordsBtn.addEventListener("click", clearTargetConfig);
 menuCollapseBtn.addEventListener("click", () => setMenuCollapsed(true));
 menuOpenBtn.addEventListener("click", () => setMenuCollapsed(false));
+window.addEventListener("resize", onResize);
 
 loadStoredTarget();
 syncTargetUi();
-updateTargetEntity();
 setMenuCollapsed(false);

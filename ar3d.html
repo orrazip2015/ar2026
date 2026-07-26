@@ -9,10 +9,11 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="ar3d.css" />
-    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   </head>
   <body>
+    <video id="camera3d" class="camera3d hidden" autoplay playsinline muted></video>
+    <canvas id="threeCanvas" class="three-canvas hidden"></canvas>
+
     <div class="container-fluid overlay-wrap d-flex align-items-end p-2 p-sm-3" id="overlay">
       <section id="hudPanel" class="overlay card w-100 mx-auto shadow">
         <div class="card-body p-3">
@@ -73,80 +74,16 @@
           </div>
 
           <button id="activateAr" class="btn btn-primary w-100" type="button">Iniciar AR 3D</button>
-          <p class="tip small mt-2 mb-0">Apunta hacia el objetivo para ver el rotulo en camara.</p>
+          <p class="tip small mt-2 mb-0">Apunta hacia el objetivo para ver un Pokemon 3D rotando.</p>
           <a class="small" href="index.html">Volver a version clasica</a>
         </div>
       </section>
 
       <button id="menuOpenBtn" class="btn btn-primary btn-sm menu-fab hidden" type="button">Subir menu</button>
     </div>
+    <div id="targetMessage3d" class="target-message-3d hidden">Objetivo encontrado</div>
 
-    <a-scene
-      id="arScene"
-      class="hidden"
-      vr-mode-ui="enabled: false"
-      embedded
-      style="width: 100%; height: 100%;"
-      renderer="antialias: true; alpha: true; sortObjects: true"
-      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false; trackingMethod: best"
-    >
-      <a-camera gps-camera rotation-reader></a-camera>
-
-      <a-entity
-        id="targetLabel"
-        gps-entity-place="latitude: 0; longitude: 0"
-        visible="false"
-        position="0 0 0"
-      >
-        <!-- Pokéball superior rojo -->
-        <a-sphere
-          id="pokeball-top"
-          radius="1"
-          color="#E41E3D"
-          material="side: double"
-        ></a-sphere>
-
-        <!-- Banda blanca del medio -->
-        <a-box
-          position="0 0 1.01"
-          width="2.1"
-          height="0.35"
-          depth="0.1"
-          color="white"
-          material="side: double"
-        ></a-box>
-
-        <!-- Pokéball inferior blanca -->
-        <a-sphere
-          id="pokeball-bottom"
-          position="0 -1.15 0"
-          radius="0.85"
-          color="white"
-          material="side: double"
-        ></a-sphere>
-
-        <!-- Círculo central (botón) -->
-        <a-sphere
-          id="pokeball-center"
-          position="0 0 1.02"
-          radius="0.35"
-          color="#333333"
-          material="side: double"
-        ></a-sphere>
-
-        <!-- Texto debajo -->
-        <a-text
-          position="0 -3 0"
-          value="¡Objetivo encontrado!"
-          align="center"
-          width="8"
-          color="white"
-          font="dejavu"
-          anchor="center"
-        ></a-text>
-      </a-entity>
-    </a-scene>
-
+    <script src="https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.min.js"></script>
     <script src="ar3d.js"></script>
   </body>
 </html>
