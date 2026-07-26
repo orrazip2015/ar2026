@@ -50,6 +50,22 @@ body {
   z-index: 14;
 }
 
+.debug-panel-3d {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  z-index: 15;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 8px 10px;
+  border-radius: 8px;
+  white-space: pre-line;
+  pointer-events: none;
+}
+
 .hidden {
   display: none;
 }

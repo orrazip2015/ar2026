@@ -13,6 +13,7 @@ const menuOpenBtn = document.getElementById("menuOpenBtn");
 const camera3d = document.getElementById("camera3d");
 const threeCanvas = document.getElementById("threeCanvas");
 const targetMessage3d = document.getElementById("targetMessage3d");
+const debugPanel3d = document.getElementById("debugPanel3d");
 
 const DEFAULT_MESSAGE = "aqui esta el punto";
 const TARGET_STORAGE_KEY = "ar-target-config";
@@ -25,6 +26,8 @@ const HEADING_SMOOTH_SAMPLES = 12;
 const state = {
   menuCollapsed: false,
   arActive: false,
+  orientationAllowed: false,
+  orientationListening: false,
   heading: null,
   headingHistory: [],
   position: null,
@@ -44,6 +47,20 @@ let threeCamera = null;
 let renderer = null;
 let pokemonGroup = null;
 let threeReady = false;
+const debugLines = [];
+
+function debugLog(message) {
+  const stamp = new Date().toLocaleTimeString();
+  const line = `[${stamp}] ${message}`;
+  debugLines.push(line);
+  if (debugLines.length > 7) {
+    debugLines.shift();
+  }
+  if (debugPanel3d) {
+    debugPanel3d.textContent = debugLines.join("\n");
+  }
+  console.log("[AR3D]", message);
+}
 
 function setMenuCollapsed(collapsed) {
   state.menuCollapsed = collapsed;
@@ -152,17 +169,34 @@ function clearTargetConfig() {
   arStatus.textContent = "Objetivo limpiado. Ingresa coordenadas para continuar.";
 }
 
+function withTimeout(promise, timeoutMs, errorMessage) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+    }),
+  ]);
+}
+
 async function requestOrientationPermissionIfNeeded() {
   if (typeof DeviceOrientationEvent === "undefined") {
-    return;
+    debugLog("Brujula: no disponible en este navegador");
+    return false;
   }
 
   if (typeof DeviceOrientationEvent.requestPermission === "function") {
-    const res = await DeviceOrientationEvent.requestPermission();
-    if (res !== "granted") {
-      throw new Error("Permiso de brujula denegado");
+    try {
+      const res = await DeviceOrientationEvent.requestPermission();
+      debugLog(`Brujula permiso: ${res}`);
+      return res === "granted";
+    } catch {
+      debugLog("Brujula permiso: fallo al solicitar");
+      return false;
     }
   }
+
+  debugLog("Brujula: permiso implicito (sin prompt)");
+  return true;
 }
 
 function ensureGeolocationAvailable() {
@@ -340,6 +374,7 @@ async function createPokemonMarker() {
 }
 
 async function initThreeScene() {
+  debugLog("Three.js: creando escena");
   scene = new THREE.Scene();
   threeCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
   renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
@@ -358,6 +393,7 @@ async function initThreeScene() {
   scene.add(pokemonGroup);
 
   threeReady = true;
+  debugLog("Three.js: escena lista");
 }
 
 function renderLoop() {
@@ -389,7 +425,7 @@ function updateArState() {
   const hasTarget =
     typeof state.target.latitude === "number" && typeof state.target.longitude === "number";
 
-  if (!state.arActive || !hasTarget || !state.position || state.heading === null) {
+  if (!state.arActive || !hasTarget || !state.position) {
     pokemonGroup.visible = false;
     targetMessage3d.classList.add("hidden");
     return;
@@ -401,7 +437,6 @@ function updateArState() {
     state.target.latitude,
     state.target.longitude
   );
-  const diff = minimalAngleDiff(state.heading, bearing);
   const distance = distanceMeters(
     state.position.latitude,
     state.position.longitude,
@@ -409,7 +444,9 @@ function updateArState() {
     state.target.longitude
   );
 
-  const aligned = diff <= ALIGNMENT_THRESHOLD_DEG;
+  const hasHeading = state.heading !== null;
+  const diff = hasHeading ? minimalAngleDiff(state.heading, bearing) : null;
+  const aligned = hasHeading ? diff <= ALIGNMENT_THRESHOLD_DEG : distance <= 30;
   pokemonGroup.visible = aligned;
 
   if (aligned) {
@@ -421,12 +458,17 @@ function updateArState() {
     arStatus.textContent = `Objetivo detectado a ${distance.toFixed(1)} m.`;
   } else {
     targetMessage3d.classList.add("hidden");
-    arStatus.textContent = `Busca objetivo | Distancia ${distance.toFixed(1)} m | Error ${diff.toFixed(1)}°`;
+    if (hasHeading) {
+      arStatus.textContent = `Busca objetivo | Distancia ${distance.toFixed(1)} m | Error ${diff.toFixed(1)}°`;
+    } else {
+      arStatus.textContent = `Brujula no disponible | Distancia ${distance.toFixed(1)} m`;
+    }
   }
 }
 
 async function startCamera() {
   if (state.cameraStream) {
+    debugLog("Camara: stream existente reutilizado");
     return;
   }
 
@@ -442,23 +484,32 @@ async function startCamera() {
   state.cameraStream = stream;
   camera3d.srcObject = stream;
   await camera3d.play();
+  debugLog("Camara: iniciada correctamente");
 }
 
 function startGeolocationWatch() {
   if (state.geolocationWatchId !== null) {
+    debugLog("GPS: watch ya activo");
     return;
   }
 
+  debugLog("GPS: iniciando watchPosition");
   state.geolocationWatchId = navigator.geolocation.watchPosition(
     pos => {
       state.position = {
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
       };
+      debugLog(
+        `GPS: ${state.position.latitude.toFixed(6)}, ${state.position.longitude.toFixed(6)} (±${Math.round(
+          pos.coords.accuracy || 0
+        )}m)`
+      );
       updateArState();
     },
     error => {
       arStatus.textContent = `Error de ubicacion: ${error.message}`;
+      debugLog(`GPS error: ${error.message}`);
     },
     {
       enableHighAccuracy: true,
@@ -470,36 +521,48 @@ function startGeolocationWatch() {
 
 async function startArExperience() {
   try {
+    debugLog("Inicio AR3D: solicitado por usuario");
     const hasTarget =
       typeof state.target.latitude === "number" && typeof state.target.longitude === "number";
 
     if (!hasTarget) {
       arStatus.textContent = "Primero ingresa coordenadas y pulsa Guardar objetivo.";
+      debugLog("Inicio AR3D: falta objetivo configurado");
       return;
     }
 
     activateArBtn.disabled = true;
     activateArBtn.textContent = "Activando...";
 
-    if (!window.isSecureContext) {
-      throw new Error("Debes abrir esta app en HTTPS o localhost");
-    }
-
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error("Camara no soportada en este navegador");
     }
 
     ensureGeolocationAvailable();
-    await requestOrientationPermissionIfNeeded();
-    await startCamera();
+    debugLog("Chequeo: geolocalizacion disponible");
+
+    state.orientationAllowed = await withTimeout(
+      requestOrientationPermissionIfNeeded(),
+      7000,
+      "Tiempo de espera de brujula agotado"
+    ).catch(() => false);
+    debugLog(
+      state.orientationAllowed
+        ? "Brujula: habilitada"
+        : "Brujula: no habilitada, se usa modo por distancia"
+    );
+
+    await withTimeout(startCamera(), 15000, "No se pudo iniciar la camara");
     startGeolocationWatch();
 
     if (!threeReady) {
-      await initThreeScene();
+      await withTimeout(initThreeScene(), 10000, "No se pudo crear la escena 3D");
     }
 
-    if (!state.arActive) {
+    if (!state.orientationListening) {
       window.addEventListener("deviceorientation", onDeviceOrientation, { passive: true });
+      state.orientationListening = true;
+      debugLog("Brujula: listener deviceorientation activo");
     }
 
     state.arActive = true;
@@ -508,15 +571,21 @@ async function startArExperience() {
     setMenuCollapsed(true);
     startRenderLoop();
     updateArState();
+    debugLog("Render: loop iniciado");
 
-    activateArBtn.textContent = "AR 3D activo";
-    arStatus.textContent = "AR 3D activo. Mueve el telefono para alinear el objetivo.";
+    activateArBtn.disabled = false;
+    activateArBtn.textContent = "Reiniciar AR 3D";
+    arStatus.textContent = state.orientationAllowed
+      ? "AR 3D activo. Mueve el telefono para alinear el objetivo."
+      : "AR 3D activo sin brujula. Acercate al objetivo para verlo.";
+    debugLog("Estado: AR 3D activo");
   } catch (error) {
     state.arActive = false;
     activateArBtn.disabled = false;
     activateArBtn.textContent = "Reintentar";
     arStatus.textContent = `No fue posible iniciar: ${error.message}`;
     targetMessage3d.classList.add("hidden");
+    debugLog(`Fallo inicio AR3D: ${error.message}`);
   }
 }
 
@@ -539,3 +608,4 @@ window.addEventListener("resize", onResize);
 loadStoredTarget();
 syncTargetUi();
 setMenuCollapsed(false);
+debugLog("Diagnostico listo");
