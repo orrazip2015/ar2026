@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>AR 3D Mall Plaza La Serena</title>
+    <link rel="stylesheet" href="ar3d.css" />
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  </head>
+  <body>
+    <section class="overlay" id="overlay">
+      <h1>AR 3D - Mall Plaza La Serena</h1>
+      <p id="arStatus">Presiona el boton para activar camara, ubicacion y brujula.</p>
+      <button id="activateAr" class="btn">Iniciar AR 3D</button>
+      <p class="tip">Cuando apuntes hacia el mall, veras el rotulo: aqui esta el mall</p>
+      <a class="link" href="index.html">Volver a version clasica</a>
+    </section>
+
+    <a-scene
+      id="arScene"
+      class="hidden"
+      vr-mode-ui="enabled: false"
+      embedded
+      renderer="antialias: true; alpha: true"
+      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false"
+    >
+      <a-camera gps-camera rotation-reader></a-camera>
+
+      <a-entity
+        gps-entity-place="latitude: -29.9127825; longitude: -71.2582358"
+        geometry="primitive: plane; width: 6; height: 2"
+        material="color: #f4ff75; opacity: 0.92; side: double"
+        text="value: aqui esta el mall; align: center; color: #003828; width: 10"
+        scale="6 6 6"
+      ></a-entity>
+    </a-scene>
+
+    <script src="ar3d.js"></script>
+  </body>
+</html>

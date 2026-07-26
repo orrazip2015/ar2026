@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>AR Mall Plaza La Serena</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <video id="camera" autoplay playsinline muted></video>
+
+      <section class="hud">
+        <h1>AR Mall Plaza La Serena</h1>
+        <p id="status">Iniciando camara, ubicacion y brujula...</p>
+        <p class="hint">Apunta el celular hacia el mall para ver el mensaje.</p>
+
+        <div class="meter">
+          <span>Rumbo al mall:</span>
+          <strong id="angle">--</strong>
+        </div>
+
+        <div class="meter">
+          <span>Distancia estimada:</span>
+          <strong id="distance">--</strong>
+        </div>
+
+        <button id="startBtn" class="start-btn">Activar sensores</button>
+        <p class="hint"><a href="ar3d.html">Probar version AR 3D con A-Frame + AR.js</a></p>
+      </section>
+
+      <div id="targetMessage" class="target-message hidden">aqui esta el mall</div>
+      <div id="reticle" class="reticle hidden"></div>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
