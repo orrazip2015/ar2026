@@ -43,6 +43,57 @@ body {
   font-size: 0.92rem;
 }
 
+.target-config {
+  margin: 8px 0 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.target-title {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+
+.target-info {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: #d9fff2;
+}
+
+.target-config label {
+  display: block;
+  margin: 6px 0 4px;
+  font-size: 0.82rem;
+}
+
+.target-config input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #f4fffd;
+  font-size: 0.9rem;
+}
+
+.coord-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.secondary-btn {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e9fff9;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .btn {
   width: 100%;
   border: 0;

@@ -12,6 +12,23 @@
     <section class="overlay" id="overlay">
       <h1>AR 3D - Mall Plaza La Serena</h1>
       <p id="arStatus">Presiona el boton para activar camara, ubicacion y brujula.</p>
+
+      <div class="target-config">
+        <p class="target-title">Coordenadas del objetivo</p>
+        <p id="targetInfo" class="target-info">Lat: -29.9127825 | Lon: -71.2582358</p>
+
+        <label for="latInput">Latitud</label>
+        <input id="latInput" type="number" step="any" inputmode="decimal" placeholder="Ej: -29.9127825" />
+
+        <label for="lonInput">Longitud</label>
+        <input id="lonInput" type="number" step="any" inputmode="decimal" placeholder="Ej: -71.2582358" />
+
+        <div class="coord-actions">
+          <button id="saveCoordsBtn" class="secondary-btn" type="button">Guardar coordenadas</button>
+          <button id="resetCoordsBtn" class="secondary-btn" type="button">Restaurar mall</button>
+        </div>
+      </div>
+
       <button id="activateAr" class="btn">Iniciar AR 3D</button>
       <p class="tip">Cuando apuntes hacia el mall, veras el rotulo: aqui esta el mall</p>
       <a class="link" href="index.html">Volver a version clasica</a>
@@ -28,6 +45,7 @@
       <a-camera gps-camera rotation-reader></a-camera>
 
       <a-entity
+        id="targetLabel"
         gps-entity-place="latitude: -29.9127825; longitude: -71.2582358"
         geometry="primitive: plane; width: 6; height: 2"
         material="color: #f4ff75; opacity: 0.92; side: double"

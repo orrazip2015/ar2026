@@ -1,9 +1,11 @@
-const TARGET = {
+const DEFAULT_TARGET = {
   name: "Mall Plaza La Serena",
   // Coordenadas de referencia de Google Maps del mall.
   latitude: -29.9127825,
   longitude: -71.2582358,
 };
+
+const TARGET_STORAGE_KEY = "ar-target-coordinates";
 
 const ALIGNMENT_THRESHOLD_DEG = 15;
 
@@ -15,13 +17,89 @@ const els = {
   targetMessage: document.getElementById("targetMessage"),
   reticle: document.getElementById("reticle"),
   startBtn: document.getElementById("startBtn"),
+  latInput: document.getElementById("latInput"),
+  lonInput: document.getElementById("lonInput"),
+  saveCoordsBtn: document.getElementById("saveCoordsBtn"),
+  resetCoordsBtn: document.getElementById("resetCoordsBtn"),
+  targetInfo: document.getElementById("targetInfo"),
 };
 
 const state = {
   heading: null,
   position: null,
   watchId: null,
+  target: { ...DEFAULT_TARGET },
 };
+
+function loadStoredTarget() {
+  const raw = localStorage.getItem(TARGET_STORAGE_KEY);
+  if (!raw) {
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.latitude === "number" && typeof parsed.longitude === "number") {
+      state.target.latitude = parsed.latitude;
+      state.target.longitude = parsed.longitude;
+      state.target.name = "Objetivo personalizado";
+    }
+  } catch {
+    localStorage.removeItem(TARGET_STORAGE_KEY);
+  }
+}
+
+function saveTargetToStorage() {
+  localStorage.setItem(
+    TARGET_STORAGE_KEY,
+    JSON.stringify({
+      latitude: state.target.latitude,
+      longitude: state.target.longitude,
+    })
+  );
+}
+
+function syncTargetUi() {
+  els.latInput.value = String(state.target.latitude);
+  els.lonInput.value = String(state.target.longitude);
+  els.targetInfo.textContent = `Lat: ${state.target.latitude} | Lon: ${state.target.longitude}`;
+}
+
+function parseCoordinate(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function applyManualCoordinates() {
+  const lat = parseCoordinate(els.latInput.value);
+  const lon = parseCoordinate(els.lonInput.value);
+
+  if (lat === null || lon === null) {
+    els.status.textContent = "Ingresa latitud y longitud validas.";
+    return;
+  }
+
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    els.status.textContent = "Rango invalido. Latitud: -90 a 90, Longitud: -180 a 180.";
+    return;
+  }
+
+  state.target.latitude = lat;
+  state.target.longitude = lon;
+  state.target.name = "Objetivo personalizado";
+  saveTargetToStorage();
+  syncTargetUi();
+  els.status.textContent = "Coordenadas guardadas. Ahora apunta hacia el nuevo objetivo.";
+  updateArState();
+}
+
+function resetToMallCoordinates() {
+  state.target = { ...DEFAULT_TARGET };
+  localStorage.removeItem(TARGET_STORAGE_KEY);
+  syncTargetUi();
+  els.status.textContent = "Coordenadas restauradas a Mall Plaza La Serena.";
+  updateArState();
+}
 
 function toRadians(deg) {
   return (deg * Math.PI) / 180;
@@ -136,8 +214,8 @@ function updateArState() {
   const userLat = state.position.latitude;
   const userLon = state.position.longitude;
 
-  const bearing = bearingToTarget(userLat, userLon, TARGET.latitude, TARGET.longitude);
-  const distance = distanceMeters(userLat, userLon, TARGET.latitude, TARGET.longitude);
+  const bearing = bearingToTarget(userLat, userLon, state.target.latitude, state.target.longitude);
+  const distance = distanceMeters(userLat, userLon, state.target.latitude, state.target.longitude);
   const diff = minimalAngleDiff(state.heading, bearing);
 
   els.angle.textContent = `${Math.round(diff)}deg`;
@@ -146,8 +224,8 @@ function updateArState() {
   const isAligned = diff <= ALIGNMENT_THRESHOLD_DEG;
 
   els.status.textContent = isAligned
-    ? `Apuntando a ${TARGET.name}`
-    : `Gira hasta alinear el celular con ${TARGET.name}`;
+    ? `Apuntando a ${state.target.name}`
+    : `Gira hasta alinear el celular con ${state.target.name}`;
 
   showTargetMessage(isAligned);
 }
@@ -187,3 +265,8 @@ async function startApp() {
 }
 
 els.startBtn.addEventListener("click", startApp);
+els.saveCoordsBtn.addEventListener("click", applyManualCoordinates);
+els.resetCoordsBtn.addEventListener("click", resetToMallCoordinates);
+
+loadStoredTarget();
+syncTargetUi();

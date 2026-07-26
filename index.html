@@ -15,6 +15,22 @@
         <p id="status">Iniciando camara, ubicacion y brujula...</p>
         <p class="hint">Apunta el celular hacia el mall para ver el mensaje.</p>
 
+        <div class="target-config">
+          <p class="target-title">Coordenadas del objetivo</p>
+          <p id="targetInfo" class="target-info">Lat: -29.9127825 | Lon: -71.2582358</p>
+
+          <label for="latInput">Latitud</label>
+          <input id="latInput" type="number" step="any" inputmode="decimal" placeholder="Ej: -29.9127825" />
+
+          <label for="lonInput">Longitud</label>
+          <input id="lonInput" type="number" step="any" inputmode="decimal" placeholder="Ej: -71.2582358" />
+
+          <div class="coord-actions">
+            <button id="saveCoordsBtn" class="secondary-btn" type="button">Guardar coordenadas</button>
+            <button id="resetCoordsBtn" class="secondary-btn" type="button">Restaurar mall</button>
+          </div>
+        </div>
+
         <div class="meter">
           <span>Rumbo al mall:</span>
           <strong id="angle">--</strong>

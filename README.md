@@ -30,12 +30,29 @@ Esta app usa JavaScript en navegador para:
 4. Presiona el boton **Activar sensores**.
 5. Apunta el telefono hacia el mall.
 
+## Ingreso manual de coordenadas (pantalla inicial)
+
+En la vista principal (`index.html`) ahora puedes:
+
+1. Escribir latitud y longitud manualmente.
+2. Presionar **Guardar coordenadas** para usar ese objetivo.
+3. Presionar **Restaurar mall** para volver a Mall Plaza La Serena.
+
+Las coordenadas guardadas quedan persistidas en el navegador (localStorage).
+
 ## Version AR 3D (A-Frame + AR.js)
 
 1. Abre `ar3d.html` desde el celular.
 2. Presiona **Iniciar AR 3D**.
 3. Acepta permisos cuando el navegador los pida.
 4. Apunta hacia el mall y busca el rotulo flotante con el texto **"aqui esta el mall"**.
+
+En la vista 3D tambien puedes ingresar latitud y longitud manualmente con los mismos botones:
+
+1. **Guardar coordenadas** para aplicar el nuevo objetivo.
+2. **Restaurar mall** para volver a las coordenadas base.
+
+La version clasica y la version 3D comparten el mismo almacenamiento local (localStorage).
 
 ## Importante (camara y geolocalizacion)
 
