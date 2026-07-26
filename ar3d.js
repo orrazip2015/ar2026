@@ -4,21 +4,24 @@ const arScene = document.getElementById("arScene");
 const overlay = document.getElementById("overlay");
 const latInput = document.getElementById("latInput");
 const lonInput = document.getElementById("lonInput");
+const messageInput = document.getElementById("messageInput");
 const saveCoordsBtn = document.getElementById("saveCoordsBtn");
 const resetCoordsBtn = document.getElementById("resetCoordsBtn");
 const targetInfo = document.getElementById("targetInfo");
 const targetLabel = document.getElementById("targetLabel");
 
-const DEFAULT_TARGET = {
-  name: "Mall Plaza La Serena",
-  latitude: -29.9127825,
-  longitude: -71.2582358,
-};
+const DEFAULT_MESSAGE = "aqui esta el punto";
 
-const TARGET_STORAGE_KEY = "ar-target-coordinates";
+const TARGET_STORAGE_KEY = "ar-target-config";
+const LEGACY_TARGET_STORAGE_KEY = "ar-target-coordinates";
 
 const state = {
-  target: { ...DEFAULT_TARGET },
+  target: {
+    name: "Objetivo personalizado",
+    latitude: null,
+    longitude: null,
+    message: DEFAULT_MESSAGE,
+  },
 };
 
 function parseCoordinate(value) {
@@ -26,35 +29,69 @@ function parseCoordinate(value) {
   return Number.isFinite(num) ? num : null;
 }
 
+function cleanMessage(value) {
+  const text = String(value || "").trim();
+  return text || DEFAULT_MESSAGE;
+}
+
 function loadStoredTarget() {
   const raw = localStorage.getItem(TARGET_STORAGE_KEY);
-  if (!raw) {
+  const legacyRaw = !raw ? localStorage.getItem(LEGACY_TARGET_STORAGE_KEY) : null;
+
+  if (!raw && !legacyRaw) {
     return;
   }
 
+  const source = raw || legacyRaw;
+  if (!raw) {
+    localStorage.removeItem(LEGACY_TARGET_STORAGE_KEY);
+  }
+
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(source);
     if (typeof parsed.latitude === "number" && typeof parsed.longitude === "number") {
       state.target.latitude = parsed.latitude;
       state.target.longitude = parsed.longitude;
+      state.target.message = cleanMessage(parsed.message);
       state.target.name = "Objetivo personalizado";
     }
   } catch {
     localStorage.removeItem(TARGET_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_TARGET_STORAGE_KEY);
   }
 }
 
 function syncTargetUi() {
-  latInput.value = String(state.target.latitude);
-  lonInput.value = String(state.target.longitude);
-  targetInfo.textContent = `Lat: ${state.target.latitude} | Lon: ${state.target.longitude}`;
+  latInput.value = state.target.latitude === null ? "" : String(state.target.latitude);
+  lonInput.value = state.target.longitude === null ? "" : String(state.target.longitude);
+  messageInput.value = state.target.message;
+  if (state.target.latitude === null || state.target.longitude === null) {
+    targetInfo.textContent = "Sin objetivo guardado";
+  } else {
+    targetInfo.textContent = `Lat: ${state.target.latitude} | Lon: ${state.target.longitude}`;
+  }
 }
 
 function updateTargetEntity() {
+  const hasTarget =
+    typeof state.target.latitude === "number" && typeof state.target.longitude === "number";
+
+  if (!hasTarget) {
+    targetLabel.setAttribute("visible", "false");
+    return;
+  }
+
   targetLabel.setAttribute(
     "gps-entity-place",
     `latitude: ${state.target.latitude}; longitude: ${state.target.longitude}`
   );
+  targetLabel.setAttribute("visible", "true");
+  targetLabel.setAttribute("text", {
+    value: state.target.message,
+    align: "center",
+    color: "#003828",
+    width: 10,
+  });
 }
 
 function saveTargetToStorage() {
@@ -63,6 +100,7 @@ function saveTargetToStorage() {
     JSON.stringify({
       latitude: state.target.latitude,
       longitude: state.target.longitude,
+      message: state.target.message,
     })
   );
 }
@@ -70,6 +108,7 @@ function saveTargetToStorage() {
 function applyManualCoordinates() {
   const lat = parseCoordinate(latInput.value);
   const lon = parseCoordinate(lonInput.value);
+  const message = cleanMessage(messageInput.value);
 
   if (lat === null || lon === null) {
     arStatus.textContent = "Ingresa latitud y longitud validas.";
@@ -83,6 +122,7 @@ function applyManualCoordinates() {
 
   state.target.latitude = lat;
   state.target.longitude = lon;
+  state.target.message = message;
   state.target.name = "Objetivo personalizado";
 
   saveTargetToStorage();
@@ -91,12 +131,18 @@ function applyManualCoordinates() {
   arStatus.textContent = "Coordenadas guardadas en AR 3D.";
 }
 
-function resetToDefaultTarget() {
-  state.target = { ...DEFAULT_TARGET };
+function clearTargetConfig() {
+  state.target = {
+    name: "Objetivo personalizado",
+    latitude: null,
+    longitude: null,
+    message: DEFAULT_MESSAGE,
+  };
   localStorage.removeItem(TARGET_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_TARGET_STORAGE_KEY);
   syncTargetUi();
   updateTargetEntity();
-  arStatus.textContent = "Coordenadas restauradas a Mall Plaza La Serena.";
+  arStatus.textContent = "Objetivo limpiado. Ingresa coordenadas para continuar.";
 }
 
 async function requestOrientationPermissionIfNeeded() {
@@ -120,6 +166,13 @@ function ensureGeolocationAvailable() {
 
 async function startArExperience() {
   try {
+    const hasTarget =
+      typeof state.target.latitude === "number" && typeof state.target.longitude === "number";
+    if (!hasTarget) {
+      arStatus.textContent = "Primero ingresa coordenadas y pulsa Guardar objetivo.";
+      return;
+    }
+
     activateArBtn.disabled = true;
     activateArBtn.textContent = "Activando...";
 
@@ -143,13 +196,13 @@ async function startArExperience() {
 window.addEventListener("gps-camera-update-position", () => {
   // Evento util para confirmar que AR.js ya recibe ubicacion.
   if (!overlay.classList.contains("hidden")) {
-    arStatus.textContent = "Ubicacion detectada. Busca el rotulo del mall en camara.";
+    arStatus.textContent = "Ubicacion detectada. Busca tu rotulo en camara.";
   }
 });
 
 activateArBtn.addEventListener("click", startArExperience);
 saveCoordsBtn.addEventListener("click", applyManualCoordinates);
-resetCoordsBtn.addEventListener("click", resetToDefaultTarget);
+resetCoordsBtn.addEventListener("click", clearTargetConfig);
 
 loadStoredTarget();
 syncTargetUi();

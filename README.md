@@ -1,17 +1,19 @@
-# App Web AR - Mall Plaza La Serena
+# App Web AR Geolocalizada
 
 Esta app usa JavaScript en navegador para:
 
 - Mostrar la camara trasera del celular.
 - Leer geolocalizacion del usuario.
 - Leer orientacion (brujula) del celular.
-- Mostrar el mensaje **"aqui esta el mall"** cuando el celular esta apuntando hacia las coordenadas del Mall Plaza La Serena.
+- Mostrar un mensaje personalizado cuando el celular esta apuntando hacia las coordenadas objetivo.
+- Usar interfaz Bootstrap mobile-first para una mejor experiencia en telefonos.
 
-## Coordenadas usadas
+## Flujo de uso
 
-- Mall Plaza La Serena:
-  - Latitud: `-29.9127825`
-  - Longitud: `-71.2582358`
+1. Ingresa latitud y longitud del objetivo.
+2. Ingresa el mensaje que quieres ver en pantalla.
+3. Presiona **Guardar objetivo**.
+4. Activa sensores y apunta el celular hacia ese punto.
 
 ## Archivos
 
@@ -28,29 +30,31 @@ Esta app usa JavaScript en navegador para:
 2. Abre la URL desde tu celular.
 3. Acepta permisos de camara, ubicacion y brujula.
 4. Presiona el boton **Activar sensores**.
-5. Apunta el telefono hacia el mall.
+5. Apunta el telefono hacia el objetivo que ingresaste.
 
 ## Ingreso manual de coordenadas (pantalla inicial)
 
 En la vista principal (`index.html`) ahora puedes:
 
 1. Escribir latitud y longitud manualmente.
-2. Presionar **Guardar coordenadas** para usar ese objetivo.
-3. Presionar **Restaurar mall** para volver a Mall Plaza La Serena.
+2. Escribir el mensaje que quieres ver en ese punto.
+3. Presionar **Guardar objetivo** para usar ese objetivo.
+4. Presionar **Limpiar objetivo** para borrar el objetivo actual.
 
-Las coordenadas guardadas quedan persistidas en el navegador (localStorage).
+Las coordenadas y el mensaje quedan persistidos en el navegador (localStorage).
 
 ## Version AR 3D (A-Frame + AR.js)
 
 1. Abre `ar3d.html` desde el celular.
 2. Presiona **Iniciar AR 3D**.
 3. Acepta permisos cuando el navegador los pida.
-4. Apunta hacia el mall y busca el rotulo flotante con el texto **"aqui esta el mall"**.
+4. Apunta hacia el objetivo y busca el rotulo flotante con tu mensaje.
 
 En la vista 3D tambien puedes ingresar latitud y longitud manualmente con los mismos botones:
 
-1. **Guardar coordenadas** para aplicar el nuevo objetivo.
-2. **Restaurar mall** para volver a las coordenadas base.
+1. Escribir latitud, longitud y mensaje.
+2. **Guardar objetivo** para aplicar el nuevo objetivo.
+3. **Limpiar objetivo** para borrar el objetivo actual.
 
 La version clasica y la version 3D comparten el mismo almacenamiento local (localStorage).
 
@@ -64,4 +68,4 @@ La version clasica y la version 3D comparten el mismo almacenamiento local (loca
 En `app.js` puedes cambiar:
 
 - `ALIGNMENT_THRESHOLD_DEG` para hacerlo mas estricto o permisivo.
-- Las coordenadas del objetivo en `TARGET`.
+- La logica de validacion y visualizacion del objetivo.

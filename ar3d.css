@@ -12,7 +12,6 @@
 html,
 body {
   margin: 0;
-  width: 100%;
   height: 100%;
   overflow: hidden;
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
@@ -20,95 +19,31 @@ body {
   color: var(--ink);
 }
 
-.overlay {
+.overlay-wrap {
   position: fixed;
+  inset: 0;
   z-index: 10;
-  left: 12px;
-  right: 12px;
-  bottom: 14px;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.overlay {
   background: var(--panel);
+  border-radius: 14px;
   backdrop-filter: blur(8px);
-}
-
-.overlay h1 {
-  margin: 0 0 8px;
-  font-size: 1rem;
-}
-
-.overlay p {
-  margin: 6px 0;
-  font-size: 0.92rem;
+  max-width: 560px;
 }
 
 .target-config {
-  margin: 8px 0 10px;
-  padding: 10px;
-  border-radius: 10px;
   background: rgba(255, 255, 255, 0.08);
 }
 
 .target-title {
-  margin: 0 0 4px;
   font-weight: 700;
+  font-size: 0.88rem;
 }
 
 .target-info {
-  margin: 0 0 8px;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: #d9fff2;
-}
-
-.target-config label {
-  display: block;
-  margin: 6px 0 4px;
-  font-size: 0.82rem;
-}
-
-.target-config input {
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 8px;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.25);
-  color: #f4fffd;
-  font-size: 0.9rem;
-}
-
-.coord-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.secondary-btn {
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  padding: 9px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #e9fff9;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.btn {
-  width: 100%;
-  border: 0;
-  border-radius: 10px;
-  padding: 10px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #013024;
-  background: linear-gradient(135deg, #b6ffea 0%, var(--accent) 100%);
-}
-
-.link {
-  display: inline-block;
-  margin-top: 8px;
-  color: #d7fff0;
 }
 
 .tip {

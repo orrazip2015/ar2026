@@ -1,11 +1,7 @@
-const DEFAULT_TARGET = {
-  name: "Mall Plaza La Serena",
-  // Coordenadas de referencia de Google Maps del mall.
-  latitude: -29.9127825,
-  longitude: -71.2582358,
-};
+const DEFAULT_MESSAGE = "aqui esta el punto";
 
-const TARGET_STORAGE_KEY = "ar-target-coordinates";
+const TARGET_STORAGE_KEY = "ar-target-config";
+const LEGACY_TARGET_STORAGE_KEY = "ar-target-coordinates";
 
 const ALIGNMENT_THRESHOLD_DEG = 15;
 
@@ -22,30 +18,54 @@ const els = {
   saveCoordsBtn: document.getElementById("saveCoordsBtn"),
   resetCoordsBtn: document.getElementById("resetCoordsBtn"),
   targetInfo: document.getElementById("targetInfo"),
+  messageInput: document.getElementById("messageInput"),
 };
 
 const state = {
   heading: null,
   position: null,
   watchId: null,
-  target: { ...DEFAULT_TARGET },
+  target: {
+    name: "Objetivo personalizado",
+    latitude: null,
+    longitude: null,
+    message: DEFAULT_MESSAGE,
+  },
 };
+
+function cleanMessage(value) {
+  const text = String(value || "").trim();
+  return text || DEFAULT_MESSAGE;
+}
+
+function updateTargetMessageLabel() {
+  els.targetMessage.textContent = state.target.message;
+}
 
 function loadStoredTarget() {
   const raw = localStorage.getItem(TARGET_STORAGE_KEY);
-  if (!raw) {
+  const legacyRaw = !raw ? localStorage.getItem(LEGACY_TARGET_STORAGE_KEY) : null;
+
+  if (!raw && !legacyRaw) {
     return;
   }
 
+  const source = raw || legacyRaw;
+  if (!raw) {
+    localStorage.removeItem(LEGACY_TARGET_STORAGE_KEY);
+  }
+
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(source);
     if (typeof parsed.latitude === "number" && typeof parsed.longitude === "number") {
       state.target.latitude = parsed.latitude;
       state.target.longitude = parsed.longitude;
+      state.target.message = cleanMessage(parsed.message);
       state.target.name = "Objetivo personalizado";
     }
   } catch {
     localStorage.removeItem(TARGET_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_TARGET_STORAGE_KEY);
   }
 }
 
@@ -55,14 +75,21 @@ function saveTargetToStorage() {
     JSON.stringify({
       latitude: state.target.latitude,
       longitude: state.target.longitude,
+      message: state.target.message,
     })
   );
 }
 
 function syncTargetUi() {
-  els.latInput.value = String(state.target.latitude);
-  els.lonInput.value = String(state.target.longitude);
-  els.targetInfo.textContent = `Lat: ${state.target.latitude} | Lon: ${state.target.longitude}`;
+  els.latInput.value = state.target.latitude === null ? "" : String(state.target.latitude);
+  els.lonInput.value = state.target.longitude === null ? "" : String(state.target.longitude);
+  els.messageInput.value = state.target.message;
+  if (state.target.latitude === null || state.target.longitude === null) {
+    els.targetInfo.textContent = "Sin objetivo guardado";
+  } else {
+    els.targetInfo.textContent = `Lat: ${state.target.latitude} | Lon: ${state.target.longitude}`;
+  }
+  updateTargetMessageLabel();
 }
 
 function parseCoordinate(value) {
@@ -73,6 +100,7 @@ function parseCoordinate(value) {
 function applyManualCoordinates() {
   const lat = parseCoordinate(els.latInput.value);
   const lon = parseCoordinate(els.lonInput.value);
+  const message = cleanMessage(els.messageInput.value);
 
   if (lat === null || lon === null) {
     els.status.textContent = "Ingresa latitud y longitud validas.";
@@ -86,6 +114,7 @@ function applyManualCoordinates() {
 
   state.target.latitude = lat;
   state.target.longitude = lon;
+  state.target.message = message;
   state.target.name = "Objetivo personalizado";
   saveTargetToStorage();
   syncTargetUi();
@@ -93,11 +122,17 @@ function applyManualCoordinates() {
   updateArState();
 }
 
-function resetToMallCoordinates() {
-  state.target = { ...DEFAULT_TARGET };
+function clearTargetConfig() {
+  state.target = {
+    name: "Objetivo personalizado",
+    latitude: null,
+    longitude: null,
+    message: DEFAULT_MESSAGE,
+  };
   localStorage.removeItem(TARGET_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_TARGET_STORAGE_KEY);
   syncTargetUi();
-  els.status.textContent = "Coordenadas restauradas a Mall Plaza La Serena.";
+  els.status.textContent = "Objetivo limpiado. Ingresa coordenadas para continuar.";
   updateArState();
 }
 
@@ -201,6 +236,16 @@ function showTargetMessage(show) {
 function updateArState() {
   const hasHeading = typeof state.heading === "number";
   const hasPosition = !!state.position;
+  const hasTarget =
+    typeof state.target.latitude === "number" && typeof state.target.longitude === "number";
+
+  if (!hasTarget) {
+    els.status.textContent = "Ingresa latitud y longitud, luego pulsa Guardar objetivo.";
+    showTargetMessage(false);
+    els.angle.textContent = "--";
+    els.distance.textContent = "--";
+    return;
+  }
 
   if (!hasHeading || !hasPosition) {
     const waiting = [];
@@ -266,7 +311,7 @@ async function startApp() {
 
 els.startBtn.addEventListener("click", startApp);
 els.saveCoordsBtn.addEventListener("click", applyManualCoordinates);
-els.resetCoordsBtn.addEventListener("click", resetToMallCoordinates);
+els.resetCoordsBtn.addEventListener("click", clearTargetConfig);
 
 loadStoredTarget();
 syncTargetUi();
