@@ -89,7 +89,6 @@ function updateTargetEntity() {
   targetLabel.setAttribute("text", {
     value: state.target.message,
     align: "center",
-    color: "#003828",
     width: 10,
   });
 }

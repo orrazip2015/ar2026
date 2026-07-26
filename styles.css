@@ -1,89 +1,37 @@
-:root {
-  --bg: #091316;
-  --glass: rgba(3, 20, 27, 0.74);
-  --text: #f4fffd;
-}
-
-* {
-  box-sizing: border-box;
-}
-
 html,
 body {
   margin: 0;
   height: 100%;
-  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-  color: var(--text);
-  background: radial-gradient(circle at 10% 10%, #15333a 0%, var(--bg) 50%, #03090a 100%);
 }
 
 .app {
   position: fixed;
   inset: 0;
+  overflow: hidden;
+}
+
+#camera {
   position: absolute;
   inset: 0;
-    border-radius: 14px;
-  background: #000;
-    max-width: 560px;
-}
-
-}
-
-.hud h1 {
-  margin: 0 0 6px;
-  font-size: 1rem;
-.hud p {
-  margin: 4px 0;
-  font-size: 0.9rem;
-}
-.hint {
-    font-size: 0.88rem;
-  color: #d4fff2;
-}
-
-  margin-top: 8px;
-  padding: 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  font-weight: 700;
-    border-radius: 10px;
-  font-size: 0.88rem;
-}
-
-.start-btn {
-  margin-top: 10px;
   width: 100%;
-  border: none;
-  border-radius: 10px;
-  padding: 10px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #01271b;
-  background: linear-gradient(135deg, #6dffd0 0%, var(--accent) 100%);
+  height: 100%;
+  object-fit: cover;
+  background: #000;
 }
 
-.start-btn:active {
-  transform: scale(0.99);
+.hud {
+  z-index: 3;
+  max-width: 560px;
 }
 
 .target-message {
   position: absolute;
   left: 50%;
-  top: 26%;
+  top: 24%;
   transform: translate(-50%, -50%);
   z-index: 4;
-  max-width: min(86vw, 560px);
-  padding: 12px 18px;
-  border-radius: 14px;
+  width: min(90vw, 560px);
   text-align: center;
-  color: #06251a;
-  font-size: clamp(1.05rem, 4.2vw, 1.7rem);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: linear-gradient(135deg, #f4ff75 0%, #5fffcb 100%);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.22), 0 12px 34px rgba(0, 0, 0, 0.35);
-  animation: pop-in 300ms ease-out;
 }
 
 .reticle {
@@ -94,8 +42,7 @@ body {
   width: 84px;
   height: 84px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--bs-light);
   z-index: 2;
 }
 
@@ -103,7 +50,7 @@ body {
 .reticle::after {
   content: "";
   position: absolute;
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--bs-light);
 }
 
 .reticle::before {
@@ -122,21 +69,4 @@ body {
 
 .hidden {
   display: none;
-}
-
-@keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -58%) scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@media (min-width: 800px) {
-  .target-message {
-    font-size: clamp(1.2rem, 2.4vw, 1.9rem);
-  }
 }
